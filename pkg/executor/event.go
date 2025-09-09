@@ -11,6 +11,7 @@ import (
 type Event struct {
 	Topics []xdr.ScVal
 	Body   xdr.ScVal
+	Ledger uint32
 }
 
 func (e *Executor) EventCall(
@@ -67,6 +68,7 @@ func (e *Executor) EventCall(
 		formattedEvent := Event{
 			Topics: topicsXdr,
 			Body:   eventBodyXdr,
+			Ledger: uint32(event.Ledger),
 		}
 
 		if _, ok := eventsResp[event.ContractID]; !ok {
