@@ -65,26 +65,34 @@ func (e *Executor) SubmitContractCall(
 	networkPassphrase string,
 	signingKeypairs []*keypair.Full,
 ) (string, error) {
+	fmt.Printf("Building contract transaction for contract address: %v\n", contractAddress)
 	transactionXdr, err := buildContractTx(contractAddress, sourceAccount, args, functionName)
 	if err != nil {
+		fmt.Printf("Error building contract transaction: %v\n", err)
 		return "", err
 	}
 
+	fmt.Printf("Signing transaction with %d keypairs\n", len(signingKeypairs))
 	for _, keypair := range signingKeypairs {
+		fmt.Printf("Signing with keypair: %s\n", keypair.Address())
 		transactionXdr, err = transactionXdr.Sign(
 			networkPassphrase,
 			keypair,
 		)
 		if err != nil {
+			fmt.Printf("Error signing transaction: %v\n", err)
 			return "", err
 		}
 	}
 
+	fmt.Println("Converting transaction to Base64")
 	transactionBase64, err := transactionXdr.Base64()
 	if err != nil {
+		fmt.Printf("Error converting transaction to Base64: %v\n", err)
 		return "", err
 	}
 
+	fmt.Println("Sending transaction")
 	response, err := e.rpc.SendTransaction(
 		context.TODO(),
 		protocol.SendTransactionRequest{
@@ -92,17 +100,22 @@ func (e *Executor) SubmitContractCall(
 		},
 	)
 	if err != nil {
+		fmt.Printf("Error sending transaction: %v\n", err)
 		return "", err
 	}
 
 	if response.ErrorResultXDR != "" {
+		fmt.Printf("Received error result XDR: %s\n", response.ErrorResultXDR)
 		var xdrErr xdr.ScError
 
 		err := xdr.SafeUnmarshalBase64(response.ErrorResultXDR, &xdrErr)
 		if err != nil {
+			fmt.Printf("Error unmarshaling error result: %v\n", err)
 			return "", err
 		}
+		fmt.Printf("Contract error: %+v\n", xdrErr)
 		return "", fmt.Errorf("contract error: %+v", xdrErr)
 	}
+	fmt.Printf("Transaction sent successfully. Hash: %s\n", response.Hash)
 	return response.Hash, nil
 }
